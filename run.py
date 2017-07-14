@@ -1,5 +1,8 @@
 #Necessary Installations: pypiwin32, python-dateutil
 #SO reference: http://stackoverflow.com/questions/21477599/read-outlook-events-via-python
+# https://msdn.microsoft.com/en-us/library/office/ff869026(v=office.15).aspx
+
+
 import win32com.client, datetime
 from dateutil.parser import *
 # from dateutil.tz import *
@@ -34,26 +37,27 @@ def main():
         subject = str(a.Subject)
         body = str(a.Body.encode("utf8"))
         duration = str(a.duration)
-        print subject
-        # print body
-        # print parse(meetingDate).time().strftime("%I:%M %p")
-        # print parse(meetingDate).date().strftime("%m/%d/%Y")
         date = parse(meetingDate).date()
         time = parse(meetingDate).time()
         # print a.RequiredAttendees
         # print a.OptionalAttendees
         # print a.Organizer
-        # print a.Recipients.Item(1)
-
+        participants = []
+        for r in a.Recipients:
+            participants += [str(r)]
 
         #if the event has appeared before, add to its meeting list
         if subject in appointmentDictionary.keys():
             appointmentDictionary[subject]["Meetings"] += [date.strftime("%m/%d/%Y")]
+            appointmentDictionary[subject]["Times"] += [time.strftime("%I:%M %p")]
+            appointmentDictionary[subject]["Durations"] += [duration]
+            temp = appointmentDictionary[subject]["Participants"]+participants
+            appointmentDictionary[subject]["Participants"] = list(set(temp))
         else:
-            appointmentDictionary[subject] = {"Subject": subject, "Body": body, "Meetings": [date.strftime("%m/%d/%Y")], "Time":time.strftime("%I:%M %p"), "Duration": duration, "Participants":[]}
+            appointmentDictionary[subject] = {"Subject": subject, "Body": body, "Meetings": [date.strftime("%m/%d/%Y")], "Times":[time.strftime("%I:%M %p")], "Durations": [duration], "Participants":participants}
 
     resultsfile = open("resultsTally.csv", 'wb')
-    fields = ["Subject", "Body", "Number of Occurences", "Date (First)", "Date (Second)", "Date (Third)", "Date (Fourth)", "Date (Fifth)", "Date (Sixth)", "Further Dates", "Time", "Duration", "Participants"]
+    fields = ["Subject", "Body", "Number of Occurences", "Date (First)", "Time (First)", "Duration (First)", "Date (Second)", "Time (Second)", "Duration (Second)", "Date (Third)", "Time (Third)", "Duration (Third)", "Further Dates", "Further Times", "Further Durations", "Participants"]
     resultsWriter = csv.DictWriter(resultsfile, fields)
     resultsWriter.writeheader()
 
@@ -61,36 +65,38 @@ def main():
         rowDict = {}
         rowDict["Subject"] = appointmentDictionary[subject]["Subject"] if appointmentDictionary[subject]["Subject"] else ""
         rowDict["Body"] = appointmentDictionary[subject]["Body"] if appointmentDictionary[subject]["Body"] else ""
-        rowDict["Time"] = appointmentDictionary[subject]["Time"] if appointmentDictionary[subject]["Time"] else ""
-        rowDict["Duration"] = appointmentDictionary[subject]["Duration"] if appointmentDictionary[subject]["Duration"] else ""
-        rowDict["Participants"] = appointmentDictionary[subject]["Participants"] if appointmentDictionary[subject]["Participants"] else ""
-        MeetingWriter(rowDict, appointmentDictionary[subject]["Meetings"])
+        rowDict["Participants"] = ", ".join(appointmentDictionary[subject]["Participants"]) if appointmentDictionary[subject]["Participants"] else ""
+        MeetingWriter(rowDict, appointmentDictionary[subject]["Meetings"], appointmentDictionary[subject]["Times"], appointmentDictionary[subject]["Durations"])
         rowDict["Number of Occurences"] = len(appointmentDictionary[subject]["Meetings"])
 
         resultsWriter.writerow(rowDict)
 
 
 
-def MeetingWriter(rowDict, meetings):
+def MeetingWriter(rowDict, meetings, times, durations):
     datecount = 0
-    for date in meetings:
+    for i in range(0, len(meetings)):
         if datecount == 0:
-           rowDict["Date (First)"] = date
+           rowDict["Date (First)"] = meetings[i]
+           rowDict["Time (First)"] = times[i]
+           rowDict["Duration (First)"] = durations[i]
         elif datecount == 1:
-           rowDict["Date (Second)"] = date
+           rowDict["Date (Second)"] = meetings[i]
+           rowDict["Time (Second)"] = times[i]
+           rowDict["Duration (Second)"] = durations[i]
         elif datecount == 2:
-           rowDict["Date (Third)"] = date
-        elif datecount == 3:
-           rowDict["Date (Fourth)"] = date
-        elif datecount == 4:
-           rowDict["Date (Fifth)"] = date
-        elif datecount == 5:
-           rowDict["Date (Sixth)"] = date
+           rowDict["Date (Third)"] = meetings[i]
+           rowDict["Time (Third)"] = times[i]
+           rowDict["Duration (Third)"] = durations[i]
         else:
-            if rowDict["Further app.s"]:
-               rowDict["Further app.s"] += ", " + date
+            if "Further Dates" in rowDict.keys():
+               rowDict["Further Dates"] += ", " + meetings[i]
+               rowDict["Further Times"] += ", " + times[i]
+               rowDict["Further Durations"] += ", " + durations[i]
             else:
-               rowDict["Further app.s"] += date
+               rowDict["Further Dates"] = meetings[i]
+               rowDict["Further Times"] = times[i]
+               rowDict["Further Durations"] = durations[i]
         datecount += 1
     return rowDict
 
