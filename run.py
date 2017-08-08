@@ -14,6 +14,8 @@ import Tkinter as tk
 import tkFileDialog
 
 def main():
+
+    print "Accessing Outlook Calendar, please wait..."
     #Access Outlook and get the events from the calendar
     Outlook = win32com.client.Dispatch("Outlook.Application")
     ns = Outlook.GetNamespace("MAPI")
@@ -23,14 +25,22 @@ def main():
     appointments.Sort("[Start]")
     appointments.IncludeRecurrences = "True"
 
+    # get user input range of dates to process
+    begin = InputDate("start")
+    end = InputDate("end")
+
+    # restrict appointments to specified range
+    appointments = appointments.Restrict("[Start] >= '" +begin+ "' AND [END] <= '" +end+ "'")
+
     #Generate a dictionary; I need to track appointment dates to count them
     appointmentDictionary = {}
     #Create a regex for time and Subject
     timeregex = re.compile('\d\d/\d\d/\d\d')
-    # subjectregex = re.compile("(?P<cancel>\w*cancel(led)?)?[ -,]{,2}(?P<subject>\w.*)[ -,]{,2}(?P<canceltwo>cancel(led)?)?")
     nameregex = re.compile(u'[Nn]ame: ?(?P<name>[\( \)\&;\w]*)', re.UNICODE)
     locationregex = re.compile(u'[Ll]ocation: ?(?P<location>[\( \)\&;\d]*)', re.UNICODE)
-    #get names from invitees?
+    #Note to self: get names from invitees?
+
+
     for a in appointments:
         #grab the date from the meeting time
         meetingDate = str(a.Start)
@@ -39,9 +49,6 @@ def main():
         duration = str(a.duration)
         date = parse(meetingDate).date()
         time = parse(meetingDate).time()
-        # print a.RequiredAttendees
-        # print a.OptionalAttendees
-        # print a.Organizer
         participants = []
         for r in a.Recipients:
             participants += [str(r)]
@@ -53,6 +60,7 @@ def main():
             appointmentDictionary[subject]["Durations"] += [duration]
             temp = appointmentDictionary[subject]["Participants"]+participants
             appointmentDictionary[subject]["Participants"] = list(set(temp))
+        # Otherwise, create a new entry
         else:
             appointmentDictionary[subject] = {"Subject": subject, "Body": body, "Meetings": [date.strftime("%m/%d/%Y")], "Times":[time.strftime("%I:%M %p")], "Durations": [duration], "Participants":participants}
 
@@ -99,6 +107,17 @@ def MeetingWriter(rowDict, meetings, times, durations):
                rowDict["Further Durations"] = durations[i]
         datecount += 1
     return rowDict
+
+def InputDate(startOrEnd):
+    isValid = False
+    while not isValid:
+        inp = raw_input("Please enter the date to " + startOrEnd + " the tally (mm/dd/yyyy):")
+        try:
+            parsedInput = parse(inp).date()
+            isValid = True
+        except:
+            print "The date you entered could not be processed."
+    return parsedInput.strftime("%m/%d/%Y")
 
 
 if __name__ == "__main__":
