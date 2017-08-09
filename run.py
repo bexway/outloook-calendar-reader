@@ -5,7 +5,6 @@
 
 import win32com.client, datetime
 from dateutil.parser import *
-# from dateutil.tz import *
 from dateutil.relativedelta import relativedelta
 import re
 import csv
