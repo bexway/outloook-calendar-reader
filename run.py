@@ -9,8 +9,6 @@ from dateutil.relativedelta import relativedelta
 import re
 import csv
 import calendar
-import Tkinter as tk
-import tkFileDialog
 
 def main():
 
