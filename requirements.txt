@@ -1,0 +1,4 @@
+pypiwin32==223
+python-dateutil==2.7.5
+pywin32==224
+six==1.11.0
